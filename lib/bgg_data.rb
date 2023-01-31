@@ -22,4 +22,15 @@ module BggData
       }
     end
   end
+
+  def self.thing(thing_id)
+    bgg_response = HTTParty.get(BOARDGAME_BASE_URL + "?id=#{thing_id}&stats=1")
+    thing = bgg_response.to_h['items']['item']
+    {
+      id: thing['id'],
+      name: thing['name'].select{|g| g['type'] == 'primary'}.first['value'],
+      mechs: thing['link'].select { |t| t['type'] == "boardgamemechanic" }.map{ |b| b['value'] },
+      rank: thing['statistics']['ratings']['ranks'].any? ? thing['statistics']['ratings']['ranks'] : 888888888888,
+    }
+  end
 end
