@@ -11,14 +11,14 @@ module BggData
   class Error < StandardError; end
 
   def self.collection(username)
-    HTTParty.get(COLLECTION_BASE_URL + "?username=#{username}&own=1")
+    ::HTTParty.get(COLLECTION_BASE_URL + "?username=#{username}&own=1")
     sleep(2)
-    bgg_response = HTTParty.get(FETCH_COLLECTION_BASE_URL + "?username=#{username}&own=1")
-    bgg_response.to_h.with_indifferent_access[:items][:item].map do |game|
+    bgg_response = ::HTTParty.get(COLLECTION_BASE_URL + "?username=#{username}&own=1")
+    bgg_response.to_h['items']['item'].map do |game|
       {
-        name: game[:name][:__content__],
-        bgg_id: game[:objectid],
-        plays: game[:numplays].to_i
+        name: game['name']['__content__'],
+        bgg_id: game['objectid'],
+        plays: game['numplays'].to_i
       }
     end
   end
