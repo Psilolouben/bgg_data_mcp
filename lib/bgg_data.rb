@@ -51,4 +51,15 @@ module BggData
       weight: thing['statistics']['ratings']['averageweight']['value'].to_f
     }
   end
+
+  def self.filter(username, params)
+    bgg_collection = collection(username, params)
+  end
+
+  def self.recommended_players(players_hash)
+    {
+      recommended: (players_hash[0]['numvotes'].to_i + players_hash[1]['numvotes'].to_i) / players_hash.sum{|x| x['numvotes'].to_f},
+      not_recommended: players_hash[2]['numvotes'].to_i  / players_hash.sum{|x| x['numvotes'].to_f}
+    }
+  end
 end
