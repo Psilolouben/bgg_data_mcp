@@ -14,11 +14,15 @@ module BggData
 
   class Error < StandardError; end
 
-  def self.collection(username)
-    ::HTTParty.get(COLLECTION_BASE_URL + "?username=#{username}&own=1")
-    sleep(2)
-    bgg_response = ::HTTParty.get(COLLECTION_BASE_URL + "?username=#{username}&own=1")
-    bgg_response.to_h['items']['item'].map do |game|
+  def self.collection(username, params = {})
+    collection_url = COLLECTION_BASE_URL + "?username=#{username}&own=1"
+    collection_url += "&minbggrating=#{params[:minbggrating]}" if params[:minbggrating]
+    ::HTTParty.get(collection_url)
+    sleep(6)
+    bgg_response = ::HTTParty.get(collection_url)
+    return unless bgg_response
+
+    bgg_response.to_h['items']['item']&.map do |game|
       {
         name: game['name']['__content__'],
         bgg_id: game['objectid'],
