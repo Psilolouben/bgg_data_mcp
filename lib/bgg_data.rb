@@ -31,6 +31,14 @@ module BggData
     end
   end
 
+  def self.search_by_title(title)
+    uri = Addressable::URI.parse("https://www.boardgamegeek.com/xmlapi2/search")
+    uri.query_values = {query: title, type: 'boardgame'}
+
+    bgg_response = HTTParty.get(uri.normalize.to_s)
+    [bgg_response.to_h.with_indifferent_access.dig("items","item")]&.flatten&.map{|x| [title, x&.dig('name', 'value'), x&.dig('id')]}
+  end
+
   def self.thing(thing_id)
     bgg_response = HTTParty.get(BOARDGAME_BASE_URL + "?id=#{thing_id}&stats=1")
     thing = bgg_response.to_h['items']['item']
