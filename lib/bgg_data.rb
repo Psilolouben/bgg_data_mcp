@@ -45,9 +45,9 @@ module BggData
     {
       id: thing['id'],
       name: thing['name'].is_a?(Array) ? thing['name'].select{|g| g['type'] == 'primary'}.first['value'] : thing['name']['value'],
-      mechs: thing['link'].select { |t| t['type'] == "boardgamemechanic" }.map{ |b| b['value'] },
+      mechs: thing['link'].select { |t| t['type'] == "boardgamemechanic" }.map { |b| b['value'] },
       rank: thing['statistics']['ratings']['ranks'].any? ? thing['statistics']['ratings']['ranks'] : 888888888888,
-      players: thing['poll'].first['results'],
+      players: thing['poll'].first['results'].map{|x| { x['numplayers'] => recommended_players(x['result']) } },
       weight: thing['statistics']['ratings']['averageweight']['value'].to_f
     }
   end
