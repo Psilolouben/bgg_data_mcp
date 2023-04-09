@@ -4,6 +4,10 @@ require_relative "bgg_data/version"
 
 module BggData
   require 'httparty'
+  require 'pry'
+  require 'addressable'
+  require 'nokogiri'
+  require 'active_support/core_ext/hash'
 
   COLLECTION_BASE_URL = 'https://www.boardgamegeek.com/xmlapi2/collection'.freeze
   BOARDGAME_BASE_URL = 'https://www.boardgamegeek.com/xmlapi2/thing'.freeze
