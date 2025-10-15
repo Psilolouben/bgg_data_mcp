@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "fast_mcp"
+
+# Load lib and mcp folders
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+$LOAD_PATH.unshift File.expand_path("../mcp", __dir__)
+
+require "fast_mcp"
+require "httparty"
+require "active_support/core_ext/hash"
+require "bgg_data"
+require_relative "../lib/mcp/get_collection_tool"
+require_relative "../lib/mcp/get_games_info_tool"
+
+# Instantiate the server
+server = FastMcp::Server.new(name: "collection", version: "1.0.0")
+
+# Tools Registration
+server.register_tool(GetCollectionTool)
+server.register_tool(GetGamesInfoTool)
+
+server.start
