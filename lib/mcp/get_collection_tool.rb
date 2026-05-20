@@ -5,9 +5,10 @@ class GetCollectionTool < FastMcp::Tool
   # The validation is based off Dry-Schema, with the addition of the description.
   arguments do
     required(:user_name).filled(:string).description("Boardgamegeek user name of the user")
+    optional(:status).filled(:string).description("Collection status filter: own (default), fortrade, prevowned, want, wanttoplay, wanttobuy, wishlist, preordered")
   end
 
-  def call(user_name:)
-    BggData.collection(user_name)
+  def call(user_name:, status: "own")
+    BggData.collection(user_name, { status: status })
   end
 end

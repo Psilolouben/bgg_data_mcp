@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:boardgamegeek.com)",
+      "WebSearch",
+      "WebFetch(domain:blog.arranfrance.com)",
+      "WebFetch(domain:publicapi.dev)",
+      "WebFetch(domain:www.postman.com)",
+      "WebFetch(domain:bgg-api.readthedocs.io)",
+      "WebFetch(domain:boardgamegeek.readthedocs.io)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:rpggeek.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:www.boardgamegeek.com)",
+      "Bash(ruby:*)"
+    ]
+  }
+}

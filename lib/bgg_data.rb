@@ -22,8 +22,26 @@ module BggData
     end
   end
 
+  def self.fetch_auction_bids(geeklist_id, username)
+    response = HTTParty.get("https://www.boardgamegeek.com/xmlapi2/geeklist/#{geeklist_id}?comments=1", headers: { Authorization: BEARER_TOKEN })
+
+    while response.include?('Your request for this geeklist has been accepted and will be processed')
+      response = HTTParty.get("https://www.boardgamegeek.com/xmlapi2/geeklist/#{geeklist_id}?comments=1", headers: { Authorization: BEARER_TOKEN })
+      sleep(1)
+    end
+
+    response['geeklist']['item'].
+      select{|x| x['username'] == username}.
+      map{|y| { y['objectname'] => y&.dig('comment')}}.compact
+  end
+
   def self.games_info(game_ids)
     bgg_response = HTTParty.get(BOARDGAME_BASE_URL + "?id=#{game_ids.join(",")}&stats=1", headers: { Authorization: BEARER_TOKEN })
+
+    while bgg_response.code == 202
+      sleep(2)
+      bgg_response = HTTParty.get(BOARDGAME_BASE_URL + "?id=#{game_ids.join(",")}&stats=1", headers: { Authorization: BEARER_TOKEN })
+    end
     [bgg_response.to_h["items"]["item"]].flatten.map do |thing|
       {
         id: thing["id"],
@@ -37,9 +55,9 @@ module BggData
         mechs: thing["link"].select { |t| t["type"] == "boardgamemechanic" }.map { |b| b["value"] },
         rank: thing["statistics"]["ratings"]["ranks"].any? ? thing["statistics"]["ratings"]["ranks"] : 888_888_888_888,
         #players: thing["poll"].first["results"].map { |x| { x["numplayers"] => recommended_players(x["result"]) } },
-        best_players: thing['poll'].find{|x| x['name'] == 'suggested_numplayers'}['results'].map do |f|
+        best_players: thing['poll']&.find{|x| x['name'] == 'suggested_numplayers'}&.dig('results')&.map do |f|
                   {
-                    f['numplayers'] => f['result'].find{|y| y['value'] == 'Best'}['numvotes']
+                    f['numplayers'] => f['result']&.find{|y| y['value'] == 'Best'}&.dig('numvotes')
                   }
                 end,
         weight: thing["statistics"]["ratings"]["averageweight"]["value"].to_f,
@@ -68,15 +86,26 @@ module BggData
     }
   end
 
+  COLLECTION_STATUSES = %w[own fortrade prevowned want wanttoplay wanttobuy wishlist preordered].freeze
+
   def self.collection(username, params = {})
-    collection_url = COLLECTION_BASE_URL + "?username=#{username}&own=1&stats=1"
+    status = params.fetch(:status, "own")
+    raise ArgumentError, "Invalid status: #{status}" unless COLLECTION_STATUSES.include?(status)
+
+    collection_url = COLLECTION_BASE_URL + "?username=#{username}&stats=1"
     collection_url += "&minbggrating=#{params[:minbggrating]}" if params[:minbggrating]
-    #::HTTParty.get(collection_url, headers: { Authorization: BEARER_TOKEN })
-    sleep(10)
     bgg_response = ::HTTParty.get(collection_url, headers: { Authorization: BEARER_TOKEN })
+
+    while bgg_response.code == 202
+      sleep(2)
+      bgg_response = ::HTTParty.get(collection_url, headers: { Authorization: BEARER_TOKEN })
+    end
+
     return unless bgg_response
 
-    bgg_response.to_h["items"]["item"]&.map do |game|
+    bgg_response.to_h["items"]["item"]&.select do |game|
+      game.dig("status", status) == "1"
+    end&.map do |game|
       {
         name: game["name"]["__content__"],
         bgg_id: game["objectid"],
