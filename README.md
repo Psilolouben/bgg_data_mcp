@@ -1,37 +1,107 @@
 # BggData
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/bgg_data`. To experiment with that code, run `bin/console` for an interactive prompt.
+A Ruby gem for interacting with the [BoardGameGeek XML API v2](https://boardgamegeek.com/wiki/page/BGG_XML_API2). Fetch user collections, game details, and auction bids — and expose them as [MCP tools](https://modelcontextprotocol.io) for use with Claude and other AI assistants.
 
-TODO: Delete this and the text above, and describe your gem
+## Features
+
+- Fetch a user's BGG game collection with status and rating filters
+- Retrieve detailed game info (mechanics, weight, player counts, rankings)
+- Search games by title
+- Parse auction bids from BGG geeklists
+- MCP server with three ready-to-use tools for AI integration
 
 ## Installation
 
-Install the gem and add to the application's Gemfile by executing:
+Add to your Gemfile:
 
-    $ bundle add bgg_data
+```ruby
+gem 'bgg_data'
+```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+Or install directly:
 
-    $ gem install bgg_data
+```bash
+gem install bgg_data
+```
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+require 'bgg_data'
+
+# Fetch a user's owned games
+BggData.collection('username')
+# => [{ name: "Wingspan", bgg_id: "266192", plays: 12, rating: "9" }, ...]
+
+# Filter by collection status
+BggData.collection('username', status: 'fortrade')
+
+# Filter by minimum BGG rating
+BggData.collection('username', minbggrating: 7)
+
+# Get detailed game info by BGG ID
+BggData.games_info(['266192', '174430'])
+# => [{ id: "266192", name: "Wingspan", mechs: [...], rank: 10, best_players: [2, 3, 4], weight: 2.45, minimum_age: 10 }, ...]
+
+# Search for games by title
+BggData.search_by_title('Catan')
+# => [["Catan", "Catan", "13"], ...]
+
+# Fetch auction bids from a BGG geeklist
+BggData.fetch_auction_bids(geeklist_id, 'username')
+```
+
+### Collection status options
+
+`own`, `fortrade`, `prevowned`, `want`, `wanttoplay`, `wanttobuy`, `wishlist`, `preordered`
+
+### Interactive console
+
+```bash
+bin/console
+```
+
+## MCP Server
+
+BggData includes an MCP server so Claude (and other MCP-compatible AI clients) can call BGG data lookups as tools.
+
+```bash
+bin/mcp_server
+```
+
+### Available tools
+
+| Tool | Description | Arguments |
+|------|-------------|-----------|
+| `GetCollectionTool` | Fetch a user's game collection | `user_name` (required), `status` (optional, default: `"own"`) |
+| `GetGamesInfoTool` | Get detailed info for one or more games | `game_ids` (required, array of strings) |
+| `GetAuctionBidsTool` | Retrieve auction bids from a BGG geeklist | `geeklist_id` (required, integer), `username` (required) |
+
+### Configuring Claude Desktop
+
+Add the following to your Claude Desktop MCP config:
+
+```json
+{
+  "mcpServers": {
+    "bgg_data": {
+      "command": "/path/to/bgg_data/bin/mcp_server"
+    }
+  }
+}
+```
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```bash
+bin/setup       # Install dependencies
+bin/console     # Start an interactive console
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/bgg_data. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/bgg_data/blob/master/CODE_OF_CONDUCT.md).
+rake spec       # Run tests
+rake rubocop    # Run linter
+rake            # Run both (default)
+```
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the BggData project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/bgg_data/blob/master/CODE_OF_CONDUCT.md).
+Released under the [MIT License](LICENSE.txt).
