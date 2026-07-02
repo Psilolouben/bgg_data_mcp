@@ -8,7 +8,8 @@ A Ruby gem for interacting with the [BoardGameGeek XML API v2](https://boardgame
 - Retrieve detailed game info (mechanics, weight, player counts, rankings)
 - Search games by title
 - Parse auction bids from BGG geeklists
-- MCP server with three ready-to-use tools for AI integration
+- Parse items (game, offering user, condition, comment) from BGG geeklists
+- MCP server with ready-to-use tools for AI integration
 
 ## Installation
 
@@ -49,6 +50,10 @@ BggData.search_by_title('Catan')
 
 # Fetch auction bids from a BGG geeklist
 BggData.fetch_auction_bids(geeklist_id, 'username')
+
+# Fetch items from a BGG geeklist
+BggData.geeklist(geeklist_id)
+# => [{ bgg_id: "266192", name: "Wingspan", username: "someuser", condition: "very good condition", comment: "Very good condition, box has minor wear..." }, ...]
 ```
 
 ### Collection status options
@@ -76,6 +81,8 @@ bin/mcp_server
 | `GetCollectionTool` | Fetch a user's game collection | `user_name` (required), `status` (optional, default: `"own"`) |
 | `GetGamesInfoTool` | Get detailed info for one or more games | `game_ids` (required, array of strings) |
 | `GetAuctionBidsTool` | Retrieve auction bids from a BGG geeklist | `geeklist_id` (required, integer), `username` (required) |
+| `GetPlaysByMonthTool` | Get plays grouped by month for a user | `user_name` (required), `year` (optional, integer) |
+| `GetGeeklistTool` | Retrieve items (game, user, condition, comment) from a BGG geeklist | `geeklist_id` (required, integer) |
 
 ### Configuring Claude Desktop
 

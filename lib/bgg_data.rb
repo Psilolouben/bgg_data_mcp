@@ -35,6 +35,57 @@ module BggData
       map{|y| { y['objectname'] => y&.dig('comment')}}.compact
   end
 
+  GEEKLIST_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/geeklist"
+
+  # Ordered from most to least specific so "very good" isn't reported as "good",
+  # and "like new" isn't swallowed by a looser match.
+  CONDITION_KEYWORDS = ["like new", "very good", "good", "played", "κατάσταση"].freeze
+
+  GEEKLIST_PENDING_MESSAGE = "Your request for this geeklist has been accepted and will be processed"
+
+  def self.geeklist(id)
+    url = "#{GEEKLIST_BASE_URL}/#{id}?comments=0"
+    bgg_response = HTTParty.get(url, headers: { Authorization: BEARER_TOKEN })
+
+    while bgg_response.code == 202 || bgg_response.body.to_s.include?(GEEKLIST_PENDING_MESSAGE)
+      sleep(1)
+      bgg_response = HTTParty.get(url, headers: { Authorization: BEARER_TOKEN })
+    end
+
+    items = [bgg_response.to_h.dig("geeklist", "item")].flatten.compact
+
+    items.map do |item|
+      body = item["body"]
+      {
+        bgg_id: item["objectid"],
+        name: item["objectname"],
+        username: item["username"],
+        condition: extract_condition(body),
+        comment: body.to_s.strip[0, 200]
+      }
+    end
+  end
+
+  # Best-effort extraction of a condition mention from a geeklist item's body text.
+  # Returns the line/sentence containing the first matching keyword, or nil if none found.
+  def self.extract_condition(body)
+    return nil if body.nil?
+
+    text = body.to_s
+    downcased = text.downcase
+
+    CONDITION_KEYWORDS.each do |keyword|
+      index = downcased.index(keyword)
+      next unless index
+
+      snippet = text[index..].to_s[/\A.*?(?=[\n\r]|\.(?:\s|$)|$)/m].to_s.strip
+      return snippet.empty? ? keyword : snippet
+    end
+
+    nil
+  end
+  private_class_method :extract_condition
+
   def self.games_info(game_ids)
     bgg_response = HTTParty.get(BOARDGAME_BASE_URL + "?id=#{game_ids.join(",")}&stats=1", headers: { Authorization: BEARER_TOKEN })
 
@@ -84,6 +135,53 @@ module BggData
                                                                                            end,
       not_recommended: players_hash[2]["numvotes"].to_i / players_hash.sum { |x| x["numvotes"].to_f }
     }
+  end
+
+  PLAYS_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/plays"
+
+  def self.plays_by_month(username, year: nil)
+    plays = []
+    page = 1
+
+    loop do
+      url = "#{PLAYS_BASE_URL}?username=#{username}&page=#{page}"
+      url += "&mindate=#{year}-01-01&maxdate=#{year}-12-31" if year
+
+      response = HTTParty.get(url, headers: { Authorization: BEARER_TOKEN })
+      break unless response.code == 200
+
+      items = response.to_h.dig("plays", "play")
+      break if items.nil? || items.empty?
+
+      items = [items] unless items.is_a?(Array)
+      plays.concat(items)
+
+      total = response.to_h.dig("plays", "total").to_i
+      break if plays.size >= total
+
+      page += 1
+    end
+
+    # Group by month, then aggregate games within each month
+    grouped = plays.group_by { |p| p["date"]&.slice(0, 7) }.sort.to_h
+
+    grouped.transform_values do |month_plays|
+      game_counts = Hash.new(0)
+      month_plays.each do |play|
+        items = play.dig("item")
+        items = [items] unless items.is_a?(Array)
+        items.each do |item|
+          name = item&.dig("name") || "Unknown"
+          quantity = play["quantity"]&.to_i || 1
+          game_counts[name] += quantity
+        end
+      end
+
+      {
+        total_plays: month_plays.sum { |p| p["quantity"]&.to_i || 1 },
+        games: game_counts.sort_by { |_, v| -v }.map { |name, count| { name: name, plays: count } }
+      }
+    end
   end
 
   COLLECTION_STATUSES = %w[own fortrade prevowned want wanttoplay wanttobuy wishlist preordered].freeze
