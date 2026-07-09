@@ -1,0 +1,353 @@
+{
+  "username": "psilolouben",
+  "name": "Marky",
+  "location": "Athens, Greece",
+
+  "taste": {
+    "weight_sweet_spot": [3.0, 4.5],
+    "sweet_spot_mechanics": [
+      "worker placement",
+      "network building",
+      "card driven",
+      "asymmetric",
+      "heavy euro",
+      "engine building",
+      "economic",
+      "political",
+      "area control",
+      "semi-coop",
+      "hidden roles",
+      "traitor",
+      "campaign",
+      "deck building",
+      "industrial",
+      "rondel",
+      "action retrieval",
+      "tech tree"
+    ],
+    "gap_mechanics": [
+      "polyomino",
+      "industrial",
+      "stock market",
+      "action retrieval",
+      "tech tree",
+      "commodity speculation"
+    ],
+    "preferred_player_counts": [4, 5],
+    "notes": "Enjoys deep strategic games with meaningful decisions. Appreciates asymmetric design, political tension, hidden information, and economic simulation. Does not enjoy games that feel purely random or luck-dependent. Weight floor ~2.5 — rarely rates games below 3.0 weight highly."
+  },
+
+  "anchors": {
+    "Battlestar Galactica": {
+      "rating": 10,
+      "mechanics": ["hidden roles", "traitor", "semi-coop", "sci-fi", "political"]
+    },
+    "Through the Ages": {
+      "rating": 9.5,
+      "mechanics": ["civilization", "card drafting", "tech tree", "engine building", "heavy euro"]
+    },
+    "Twilight Struggle": {
+      "rating": 9.2,
+      "mechanics": ["card driven", "political", "area control", "wargame"]
+    },
+    "Dead of Winter": {
+      "rating": 9.0,
+      "mechanics": ["semi-coop", "traitor", "hidden roles", "narrative", "thematic"]
+    },
+    "Le Havre": {
+      "rating": 9.0,
+      "mechanics": ["worker placement", "resource management", "heavy euro", "network"]
+    },
+    "Food Chain Magnate": {
+      "rating": 9.0,
+      "mechanics": ["economic", "heavy euro", "network building", "worker placement"]
+    },
+    "Mansions of Madness": {
+      "rating": 9.0,
+      "mechanics": ["co-op", "campaign", "thematic", "narrative"]
+    },
+    "Fury of Dracula": {
+      "rating": 9.0,
+      "mechanics": ["hidden movement", "asymmetric", "thematic", "deduction"]
+    },
+    "Crokinole": {
+      "rating": 9.0,
+      "mechanics": ["dexterity", "abstract"]
+    },
+    "Sky Team": {
+      "rating": 8.9,
+      "mechanics": ["co-op", "deduction", "communication", "real-time"]
+    },
+    "Dixit Odyssey": {
+      "rating": 8.8,
+      "mechanics": ["storytelling", "voting", "creative", "party"]
+    },
+    "Brass Lancashire": {
+      "rating": 8.8,
+      "mechanics": ["network building", "heavy euro", "card driven", "economic"]
+    },
+    "LotR Fellowship Trick-Taking": {
+      "rating": 8.8,
+      "mechanics": ["trick-taking", "co-op", "hand management"]
+    },
+    "Roll Player": {
+      "rating": 8.5,
+      "mechanics": ["dice placement", "engine building", "fantasy", "tableau"]
+    },
+    "Hegemony": {
+      "rating": 8.5,
+      "mechanics": ["asymmetric", "political", "economic", "heavy euro"]
+    },
+    "Viticulture": {
+      "rating": 8.5,
+      "mechanics": ["worker placement", "engine building", "euro", "thematic"]
+    },
+    "Terraforming Mars": {
+      "rating": 8.5,
+      "mechanics": ["engine building", "tableau", "sci-fi", "card driven", "economic"]
+    },
+    "Dominion": {
+      "rating": 8.5,
+      "mechanics": ["deck building", "card drafting", "engine building"]
+    },
+    "Bomb Busters": {
+      "rating": 8.5,
+      "mechanics": ["co-op", "deduction", "communication"]
+    },
+    "Mind MGMT": {
+      "rating": 8.0,
+      "mechanics": ["hidden movement", "asymmetric", "deduction", "2-player"]
+    },
+    "Root": {
+      "rating": 8.0,
+      "mechanics": ["asymmetric", "area control", "political"]
+    },
+    "Keyflower": {
+      "rating": 8.0,
+      "mechanics": ["worker placement", "auction", "set collection", "tile placement"]
+    },
+    "Brass Birmingham": {
+      "rating": 8.0,
+      "mechanics": ["network building", "heavy euro", "card driven", "economic"]
+    },
+    "Great Western Trail": {
+      "rating": 8.0,
+      "mechanics": ["deck building", "worker placement", "route building", "heavy euro"]
+    },
+    "Concordia": {
+      "rating": 8.0,
+      "mechanics": ["network building", "card driven", "euro", "route building"]
+    },
+    "Castles of Burgundy": {
+      "rating": 9.0,
+      "mechanics": ["tile placement", "dice", "euro", "set collection"]
+    },
+    "Bruges": {
+      "rating": 8.0,
+      "mechanics": ["card drafting", "euro", "set collection"]
+    },
+    "In the Year of the Dragon": {
+      "rating": 8.0,
+      "mechanics": ["worker placement", "euro", "feld", "pressure"]
+    },
+    "El Grande": {
+      "rating": 8.0,
+      "mechanics": ["area control", "auction", "political"]
+    },
+    "Scythe": {
+      "rating": 7.8,
+      "mechanics": ["area control", "engine building", "asymmetric", "worker placement"]
+    },
+    "Terra Mystica": {
+      "rating": 7.8,
+      "mechanics": ["asymmetric", "area control", "hex", "heavy euro"],
+      "note": "Being sold — aesthetic objection (feels outdated, utilitarian hex design)"
+    },
+    "Clans of Caledonia": {
+      "rating": 7.8,
+      "mechanics": ["asymmetric", "economic", "area influence", "trading"]
+    },
+    "Hive": {
+      "rating": 7.8,
+      "mechanics": ["abstract", "2-player", "tile placement"]
+    },
+    "K2": {
+      "rating": 7.8,
+      "mechanics": ["resource management", "push your luck", "racing"]
+    },
+    "Thunderstone Quest": {
+      "rating": 7.8,
+      "mechanics": ["deck building", "dungeon crawl", "engine building"]
+    },
+    "Secret Hitler": {
+      "rating": 7.9,
+      "mechanics": ["hidden roles", "social deduction", "political"]
+    },
+    "Chameleon": {
+      "rating": 7.9,
+      "mechanics": ["social deduction", "hidden roles", "party"]
+    },
+    "Hot Streak": {
+      "rating": 7.9,
+      "mechanics": ["betting", "push your luck"]
+    },
+    "Bus": {
+      "rating": 7.9,
+      "mechanics": ["economic", "heavy euro", "action queue", "network building"]
+    },
+    "The Gallerist": {
+      "rating": 7.9,
+      "mechanics": ["worker placement", "heavy euro", "economic", "lacerda"]
+    },
+    "Agricola": {
+      "rating": 7.9,
+      "mechanics": ["worker placement", "heavy euro", "resource management", "engine building"]
+    },
+    "Maracaibo": {
+      "rating": 7.7,
+      "mechanics": ["card driven", "deck building", "route building", "campaign"]
+    },
+    "Heat: Pedal to the Metal": {
+      "rating": 7.7,
+      "mechanics": ["racing", "engine building", "hand management", "push your luck"]
+    },
+    "The White Castle": {
+      "rating": 8.4,
+      "mechanics": ["worker placement", "dice", "heavy euro", "engine building"]
+    }
+  },
+
+  "designer_pedigree": {
+    "Rosenberg": {
+      "games": [
+        {"name": "Le Havre", "rating": 9.0},
+        {"name": "Agricola", "rating": 7.9},
+        {"name": "At the Gates of Loyang", "rating": 7.2},
+        {"name": "Hallertau", "rating": 7.4},
+        {"name": "Nusfjord", "rating": null},
+        {"name": "Ora et Labora", "rating": null},
+        {"name": "Caverna", "rating": null}
+      ]
+    },
+    "Feld": {
+      "games": [
+        {"name": "Castles of Burgundy", "rating": 9.0},
+        {"name": "Grand Austria Hotel", "rating": 7.9},
+        {"name": "Bruges", "rating": 8.0},
+        {"name": "In the Year of the Dragon", "rating": 8.0},
+        {"name": "Troyes", "rating": 7.5},
+        {"name": "Trajan", "rating": null}
+      ]
+    },
+    "Tascini": {
+      "games": [
+        {"name": "Terra Mystica", "rating": 7.8, "note": "selling for aesthetic reasons"}
+      ]
+    },
+    "Lacerda": {
+      "games": [
+        {"name": "The Gallerist", "rating": 7.9},
+        {"name": "Mombasa", "rating": null}
+      ]
+    },
+    "Wallace": {
+      "games": [
+        {"name": "Brass Lancashire", "rating": 8.8},
+        {"name": "Brass Birmingham", "rating": null},
+        {"name": "London", "rating": 7.5},
+        {"name": "Age of Steam", "rating": null}
+      ]
+    },
+    "Pfister": {
+      "games": [
+        {"name": "Great Western Trail", "rating": 8.0},
+        {"name": "Maracaibo", "rating": 7.7}
+      ]
+    },
+    "GMT": {
+      "games": [
+        {"name": "Twilight Struggle", "rating": 9.2},
+        {"name": "Cuba Libre", "rating": null},
+        {"name": "Andean Abyss", "rating": null}
+      ]
+    },
+    "Breese": {
+      "games": [
+        {"name": "Keyflower", "rating": 8.0}
+      ]
+    },
+    "Friese": {
+      "games": [
+        {"name": "Power Grid", "rating": null, "note": "previously owned, sold"},
+        {"name": "Fishing", "rating": 6.2},
+        {"name": "Fabled Fruits", "rating": null, "note": "previously owned"},
+        {"name": "Fear", "rating": null, "note": "previously owned"},
+        {"name": "Friday", "rating": 7.0}
+      ]
+    },
+    "Splotter": {
+      "games": [
+        {"name": "Food Chain Magnate", "rating": 9.0}
+      ]
+    },
+    "Days of Wonder": {
+      "games": [
+        {"name": "Heat: Pedal to the Metal", "rating": 7.7},
+        {"name": "Ticket to Ride", "rating": 8.0},
+        {"name": "Ticket to Ride Europe 15th Anniversary", "rating": 8.3}
+      ]
+    },
+    "Devir": {
+      "games": [
+        {"name": "The White Castle", "rating": 8.4}
+      ]
+    },
+    "CGE": {
+      "games": [
+        {"name": "Codenames", "rating": 8.2}
+      ]
+    }
+  },
+
+  "prior_play_experience": {
+    "Revive": {
+      "score": 10,
+      "platform": "BGA",
+      "notes": "Loved it on Board Game Arena. Concern about physical distance calculations at the table but the design itself is confirmed enjoyable."
+    }
+  },
+
+  "aesthetic_penalties": {
+    "Age of Innovation": {
+      "penalty": 12,
+      "reason": "Direct spiritual successor of Terra Mystica — same hex map, same wooden disc aesthetic, same utilitarian feel. Terra Mystica is being sold precisely because it feels outdated and the design is unappealing."
+    }
+  },
+
+  "publisher_priors": {
+    "GMT": 500,
+    "Splotter": 300
+  },
+
+  "collection_mechanics_owned": [
+    "worker placement", "deck building", "area control", "network building",
+    "card driven", "asymmetric", "tile placement", "hidden roles", "traitor",
+    "semi-coop", "co-op", "dice", "bag building", "engine building", "economic",
+    "political", "wargame", "deduction", "narrative", "heavy euro", "investigation",
+    "pattern building", "set collection", "route building", "rondel", "civilization",
+    "tableau", "exploration", "push your luck", "racing", "hand management",
+    "auction", "trick-taking", "dexterity", "abstract", "real-time"
+  ],
+
+  "selling": [
+    "Terra Mystica"
+  ],
+
+  "notes": {
+    "player_count": "Most sessions are 4 or 5 players. Games that peak at exactly 2 score low on player count fit.",
+    "session_length": "Happy with 2-4 hour sessions. Regularly plays Through the Ages (9.5) confirming high complexity tolerance.",
+    "nemesis_experience": "Played Nemesis — liked it but has reservations about player elimination and early hibernation causing spectating. Passed on buying.",
+    "terra_mystica_selling": "Selling TM: 'feels outdated, plus the design'. Aesthetic objection, not mechanical. Any game with the same hex/wooden-disc look should receive aesthetic penalty.",
+    "depth_vs_breadth": "Likely a depth collector — repeated plays of favourites (Dead of Winter 41 plays, One Night Werewolf 169 plays, Chameleon 44 plays). Gap score of 0 does not necessarily mean 'pass' — it may mean 'more of what you love'."
+  }
+}
