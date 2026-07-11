@@ -1,3 +1,5 @@
+require 'json'
+
 class GetSearchTool < FastMcp::Tool
   description "Search BoardGameGeek for board games and expansions by title"
   # These arguments will generate the needed JSON to be presented to the MCP Client
@@ -8,6 +10,7 @@ class GetSearchTool < FastMcp::Tool
   end
 
   def call(query:)
-    BggData.search(query)
+    results = BggData.search(query)
+    results.to_json
   end
 end

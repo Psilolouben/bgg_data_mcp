@@ -1,3 +1,5 @@
+require 'json'
+
 class GetGamesInfoTool < FastMcp::Tool
   description "Get board games info from boardgamegeek "
   # These arguments will generate the needed JSON to be presented to the MCP Client
@@ -11,6 +13,7 @@ class GetGamesInfoTool < FastMcp::Tool
   end
 
   def call(game_ids:)
-    BggData.games_info(game_ids)
+    results = BggData.games_info(game_ids)
+    results.to_json
   end
 end

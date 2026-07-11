@@ -1,3 +1,5 @@
+require 'json'
+
 class GetCollectionTool < FastMcp::Tool
   description "Get Board game geek game collection of a user given his user name"
   # These arguments will generate the needed JSON to be presented to the MCP Client
@@ -9,6 +11,7 @@ class GetCollectionTool < FastMcp::Tool
   end
 
   def call(user_name:, status: "own")
-    BggData.collection(user_name, { status: status })
+    results = BggData.collection(user_name, { status: status })
+    results.to_json
   end
 end
