@@ -17,6 +17,7 @@ require_relative "../lib/mcp/get_games_info_tool"
 require_relative "../lib/mcp/get_auction_bids_tool"
 require_relative "../lib/mcp/get_plays_by_month_tool"
 require_relative "../lib/mcp/get_geeklist_tool"
+require_relative "../lib/mcp/get_search_tool"
 
 # Instantiate the server
 server = FastMcp::Server.new(name: "collection", version: "1.0.0")
@@ -27,5 +28,6 @@ server.register_tool(GetGamesInfoTool)
 server.register_tool(GetAuctionBidsTool)
 server.register_tool(GetPlaysByMonthTool)
 server.register_tool(GetGeeklistTool)
+server.register_tool(GetSearchTool)
 
 server.start

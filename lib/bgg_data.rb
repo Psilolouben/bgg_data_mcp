@@ -5,6 +5,7 @@ require_relative "bgg_data/version"
 module BggData
   require "active_support/core_ext/hash"
   require 'httparty'
+  require 'erb'
 
   COLLECTION_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/collection"
   BOARDGAME_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/thing"
@@ -182,6 +183,34 @@ module BggData
         games: game_counts.sort_by { |_, v| -v }.map { |name, count| { name: name, plays: count } }
       }
     end
+  end
+
+  SEARCH_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/search"
+  SEARCHABLE_TYPES = %w[boardgame boardgameexpansion].freeze
+
+  def self.search(query)
+    url = SEARCH_BASE_URL + "?query=#{ERB::Util.url_encode(query)}&type=#{SEARCHABLE_TYPES.join(",")}"
+    bgg_response = HTTParty.get(url, headers: { Authorization: BEARER_TOKEN })
+
+    retries = 0
+    while bgg_response.code == 202 && retries < 5
+      sleep(2)
+      bgg_response = HTTParty.get(url, headers: { Authorization: BEARER_TOKEN })
+      retries += 1
+    end
+
+    items = [bgg_response.to_h.dig("items", "item")].flatten.compact
+
+    items.select { |item| SEARCHABLE_TYPES.include?(item["type"]) }
+         .map do |item|
+           {
+             id: item["id"],
+             name: item.dig("name", "value"),
+             year: item.dig("yearpublished", "value")&.to_i
+           }
+         end
+         .sort_by { |game| -(game[:year] || 0) }
+         .first(20)
   end
 
   COLLECTION_STATUSES = %w[own fortrade prevowned want wanttoplay wanttobuy wishlist preordered].freeze
