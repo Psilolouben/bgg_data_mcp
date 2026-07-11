@@ -189,7 +189,14 @@ module BggData
   SEARCHABLE_TYPES = %w[boardgame boardgameexpansion].freeze
 
   def self.search(query)
+    results = fetch_search_results(query, exact: true)
+    results = fetch_search_results(query, exact: false) if results.empty?
+    results.first(50)
+  end
+
+  def self.fetch_search_results(query, exact:)
     url = SEARCH_BASE_URL + "?query=#{ERB::Util.url_encode(query)}&type=#{SEARCHABLE_TYPES.join(",")}"
+    url += "&exact=1" if exact
     bgg_response = HTTParty.get(url, headers: { Authorization: BEARER_TOKEN })
 
     retries = 0
@@ -209,8 +216,9 @@ module BggData
              year: item.dig("yearpublished", "value")&.to_i
            }
          end
-         .first(50)
+         .uniq { |game| game[:id] }
   end
+  private_class_method :fetch_search_results
 
   COLLECTION_STATUSES = %w[own fortrade prevowned want wanttoplay wanttobuy wishlist preordered].freeze
 
