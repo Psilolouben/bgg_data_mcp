@@ -111,7 +111,7 @@ module BggData
                   {
                     f['numplayers'] => f['result']&.find{|y| y['value'] == 'Best'}&.dig('numvotes')
                   }
-                end,
+                end || [],
         weight: thing["statistics"]["ratings"]["averageweight"]["value"].to_f,
         minimum_age: thing.dig('minage','value')
 
