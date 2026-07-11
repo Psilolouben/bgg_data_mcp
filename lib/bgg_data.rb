@@ -209,8 +209,7 @@ module BggData
              year: item.dig("yearpublished", "value")&.to_i
            }
          end
-         .sort_by { |game| -(game[:year] || 0) }
-         .first(20)
+         .first(50)
   end
 
   COLLECTION_STATUSES = %w[own fortrade prevowned want wanttoplay wanttobuy wishlist preordered].freeze
