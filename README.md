@@ -48,8 +48,9 @@ BggData.games_info(['266192', '174430'])
 BggData.search_by_title('Catan')
 # => [["Catan", "Catan", "13"], ...]
 
-# Fetch auction bids from a BGG geeklist
-BggData.fetch_auction_bids(geeklist_id, 'username')
+# Fetch the bid breakdown for every item in a BGG auction geeklist
+BggData.fetch_auction_bids(geeklist_id)
+# => [{ "Wingspan" => { "alice" => 45, "bob" => 50 } }, { "Gloomhaven" => {} }, ...]
 
 # Fetch items from a BGG geeklist
 BggData.geeklist(geeklist_id)
@@ -80,7 +81,7 @@ bin/mcp_server
 |------|-------------|-----------|
 | `GetCollectionTool` | Fetch a user's game collection | `user_name` (required), `status` (optional, default: `"own"`) |
 | `GetGamesInfoTool` | Get detailed info for one or more games | `game_ids` (required, array of strings) |
-| `GetAuctionBidsTool` | Retrieve auction bids from a BGG geeklist | `geeklist_id` (required, integer), `username` (required) |
+| `GetAuctionBidsTool` | Get the bid breakdown for every item in a BGG auction geeklist | `geeklist_id` (required, integer) |
 | `GetPlaysByMonthTool` | Get plays grouped by month for a user | `user_name` (required), `year` (optional, integer) |
 | `GetGeeklistTool` | Retrieve items (game, user, condition, comment) from a BGG geeklist | `geeklist_id` (required, integer) |
 

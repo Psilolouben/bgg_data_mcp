@@ -23,7 +23,13 @@ module BggData
     end
   end
 
-  def self.fetch_auction_bids(geeklist_id, username)
+  # Each item is posted by its own seller (item['username']); with `comments=1`, BGG
+  # nests the replies to that item under item['comment'] as either nil (no replies), a
+  # single Hash (one reply), or an Array of Hashes (multiple), each shaped like
+  # { "__content__" => "20\n", "username" => "bidder", "date" => "...", ... }.
+  NUMERIC_COMMENT_PATTERN = /\A\d+\.?\z/
+
+  def self.fetch_auction_bids(geeklist_id)
     response = HTTParty.get("https://www.boardgamegeek.com/xmlapi2/geeklist/#{geeklist_id}?comments=1", headers: { Authorization: BEARER_TOKEN })
 
     while response.include?('Your request for this geeklist has been accepted and will be processed')
@@ -35,14 +41,38 @@ module BggData
     # geeklist-comments generation is asynchronous, and an in-between response whose body
     # doesn't match the pending-message text above can slip past the retry loop as a
     # malformed payload. Guard the same way `.geeklist` already does (see below), so a
-    # request for a username with zero presence on the list returns [] instead of raising.
+    # geeklist BGG hasn't finished generating comments for yet returns [] instead of raising.
     items = [response.to_h.dig("geeklist", "item")].flatten.compact
 
-    items.
-      select { |x| x['username'] == username }.
-      map { |y| { y['objectname'] => y.dig('comment') } }.
-      compact
+    items.map do |item|
+      seller = item['username']
+      comments = [item['comment']].flatten.compact
+
+      bids = comments.each_with_object({}) do |comment, breakdown|
+        next if comment['username'] == seller
+
+        amount = numeric_bid(comment['__content__'])
+        next unless amount
+
+        # Comments come back oldest-first, so a later iteration for the same bidder
+        # overwrites their earlier one, leaving each bidder's *last* numeric bid.
+        breakdown[comment['username']] = amount
+      end
+
+      { item['objectname'] => bids }
+    end
   end
+
+  # Treats a comment's content as a bid only if it's purely numeric (aside from
+  # incidental surrounding whitespace and an optional trailing "."), so a non-bid
+  # reply like "is this the '20 or '22 edition??" is correctly ignored.
+  def self.numeric_bid(content)
+    text = content.to_s.strip
+    return nil unless text.match?(NUMERIC_COMMENT_PATTERN)
+
+    text.chomp('.').to_i
+  end
+  private_class_method :numeric_bid
 
   GEEKLIST_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/geeklist"
 

@@ -1,11 +1,10 @@
 class GetAuctionBidsTool < FastMcp::Tool
   description <<~DESC
-    Retrieves auction bids from a BoardGameGeek geeklist.
+    Retrieves the bid breakdown for every item in a BoardGameGeek auction geeklist.
 
-    Treat each numeric comment as a bid.
-    For each item, only the last numeric comment from a user other
-    than the provided username is considered a valid bid.
-    Ignore all non-numeric comments.
+    For each item, treats each numeric comment as a bid, ignores comments from the
+    item's own seller and any non-numeric replies, and keeps only the last numeric
+    bid from each remaining bidder.
   DESC
   # These arguments will generate the needed JSON to be presented to the MCP Client
   # And they will be validated at run time.
@@ -13,14 +12,10 @@ class GetAuctionBidsTool < FastMcp::Tool
   arguments do
     required(:geeklist_id)
       .value(:integer)
-      .description("Numeric ID of the geeklist")
-
-    required(:username)
-      .value(:string)
-      .description("Username of whom we need the bids")
+      .description("Numeric ID of the auction geeklist")
   end
 
-  def call(geeklist_id:, username:)
-    BggData.fetch_auction_bids(geeklist_id, username)
+  def call(geeklist_id:)
+    BggData.fetch_auction_bids(geeklist_id)
   end
 end

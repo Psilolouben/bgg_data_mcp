@@ -105,41 +105,82 @@ RSpec.describe BggData do
       allow(HTTParty).to receive(:get).and_return(response)
     end
 
-    it "returns the item's comment when the username has a valid bid" do
-      stub_geeklist_response(
-        "geeklist" => {
-          "item" => [
-            { "objectname" => "Wingspan", "username" => "alice", "comment" => "45" },
-            { "objectname" => "Gloomhaven", "username" => "bob", "comment" => "60" }
-          ]
-        }
-      )
-
-      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([{ "Wingspan" => "45" }])
+    # Comment shape matches BGG's real xmlapi2/geeklist response with comments=1: each
+    # is a Hash with "__content__" (the text) and "username" (who posted it), among
+    # other fields (date, postdate, editdate, thumbs) that fetch_auction_bids ignores.
+    def comment(username, content)
+      { "__content__" => content, "username" => username }
     end
 
-    it "returns the item with a nil comment when the username has no bid yet" do
+    it "keeps a bidder's last numeric comment and ignores the seller and non-numeric replies" do
       stub_geeklist_response(
         "geeklist" => {
           "item" => [
-            { "objectname" => "Wingspan", "username" => "alice", "comment" => nil }
+            {
+              "objectname" => "Far Away",
+              "username" => "kgkan",
+              "comment" => [
+                comment("Stelan", "\nIs this the '20 or '22 edition??\n"),
+                comment("kgkan", "\nIt's the '20 edition\n"),
+                comment("Stelan", "\n20.\n")
+              ]
+            }
           ]
         }
       )
 
-      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([{ "Wingspan" => nil }])
+      expect(described_class.fetch_auction_bids(12_345)).to eq([{ "Far Away" => { "Stelan" => 20 } }])
     end
 
-    it "returns an empty array when the username never appears on the geeklist at all" do
+    it "tracks each bidder's own last bid across multiple bidders on the same item" do
       stub_geeklist_response(
         "geeklist" => {
           "item" => [
-            { "objectname" => "Wingspan", "username" => "bob", "comment" => "45" }
+            {
+              "objectname" => "Meadow",
+              "username" => "kgkan",
+              "comment" => [
+                comment("bill6261", "\n25\n"),
+                comment("PANAOS1125", "\n26\n"),
+                comment("bill6261", "\n27\n"),
+                comment("PANAOS1125", "\n28\n")
+              ]
+            }
           ]
         }
       )
 
-      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([])
+      expect(described_class.fetch_auction_bids(12_345)).to eq(
+        [{ "Meadow" => { "bill6261" => 27, "PANAOS1125" => 28 } }]
+      )
+    end
+
+    it "returns an empty breakdown for an item with no bids yet" do
+      stub_geeklist_response(
+        "geeklist" => {
+          "item" => [
+            { "objectname" => "Brazil: Imperial", "username" => "kgkan", "comment" => nil }
+          ]
+        }
+      )
+
+      expect(described_class.fetch_auction_bids(12_345)).to eq([{ "Brazil: Imperial" => {} }])
+    end
+
+    it "handles a single reply that BGG collapses from an Array to a bare Hash" do
+      stub_geeklist_response(
+        "geeklist" => {
+          "item" => [
+            {
+              "objectname" => "Neanderthal",
+              "username" => "kgkan",
+              "comment" => comment("PANAOS1125", "\n20\n")
+            }
+          ]
+        }
+      )
+
+      expect(described_class.fetch_auction_bids(12_345)).to eq([{ "Neanderthal" => { "PANAOS1125" => 20 } }])
     end
 
     it "returns an empty array instead of raising when BGG's response has no geeklist/item data" do
@@ -149,17 +190,21 @@ RSpec.describe BggData do
       # `undefined method '[]' for nil:NilClass` instead of returning [].
       stub_geeklist_response({})
 
-      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([])
+      expect(described_class.fetch_auction_bids(12_345)).to eq([])
     end
 
     it "does not raise when a single-item geeklist collapses 'item' from an Array to a Hash" do
       stub_geeklist_response(
         "geeklist" => {
-          "item" => { "objectname" => "Wingspan", "username" => "alice", "comment" => "45" }
+          "item" => {
+            "objectname" => "Wingspan",
+            "username" => "kgkan",
+            "comment" => comment("alice", "45")
+          }
         }
       )
 
-      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([{ "Wingspan" => "45" }])
+      expect(described_class.fetch_auction_bids(12_345)).to eq([{ "Wingspan" => { "alice" => 45 } }])
     end
   end
 end
