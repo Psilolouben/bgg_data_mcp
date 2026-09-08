@@ -31,9 +31,17 @@ module BggData
       sleep(1)
     end
 
-    response['geeklist']['item'].
-      select{|x| x['username'] == username}.
-      map{|y| { y['objectname'] => y&.dig('comment')}}.compact
+    # `response['geeklist']` (and, separately, its "item" key) can come back nil: BGG's
+    # geeklist-comments generation is asynchronous, and an in-between response whose body
+    # doesn't match the pending-message text above can slip past the retry loop as a
+    # malformed payload. Guard the same way `.geeklist` already does (see below), so a
+    # request for a username with zero presence on the list returns [] instead of raising.
+    items = [response.to_h.dig("geeklist", "item")].flatten.compact
+
+    items.
+      select { |x| x['username'] == username }.
+      map { |y| { y['objectname'] => y.dig('comment') } }.
+      compact
   end
 
   GEEKLIST_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/geeklist"
@@ -104,15 +112,15 @@ module BggData
               else
                 thing["name"]["value"]
               end,
-        mechs: thing["link"].select { |t| t["type"] == "boardgamemechanic" }.map { |b| b["value"] },
-        rank: thing["statistics"]["ratings"]["ranks"].any? ? thing["statistics"]["ratings"]["ranks"] : 888_888_888_888,
+        mechs: (thing["link"] || []).select { |t| t["type"] == "boardgamemechanic" }.map { |b| b["value"] },
+        rank: (thing["statistics"]["ratings"]["ranks"] || []).any? ? thing["statistics"]["ratings"]["ranks"] : 888_888_888_888,
         #players: thing["poll"].first["results"].map { |x| { x["numplayers"] => recommended_players(x["result"]) } },
-        best_players: thing['poll']&.find{|x| x['name'] == 'suggested_numplayers'}&.dig('results')&.map do |f|
+        best_players: (thing['poll']&.find{|x| x['name'] == 'suggested_numplayers'}&.dig('results') || []).map do |f|
                   {
                     f['numplayers'] => f['result']&.find{|y| y['value'] == 'Best'}&.dig('numvotes')
                   }
                 end || [],
-        weight: thing["statistics"]["ratings"]["averageweight"]["value"].to_f,
+        weight: thing.dig("statistics","ratings","averageweight","value").to_f,
         minimum_age: thing.dig('minage','value')
 
       }

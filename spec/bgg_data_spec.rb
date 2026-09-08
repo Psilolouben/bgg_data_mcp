@@ -93,4 +93,73 @@ RSpec.describe BggData do
       )
     end
   end
+
+  describe ".fetch_auction_bids" do
+    def stub_geeklist_response(response_hash)
+      # A plain double, not instance_double: fetch_auction_bids calls `.include?`
+      # directly on the HTTParty::Response object (to detect BGG's "still processing"
+      # placeholder body) rather than on `.body`, and that method only exists via
+      # HTTParty::Response's dynamic delegation to the parsed body, not as a real
+      # instance method, so it isn't safe to verify against the class.
+      response = double("response", to_h: response_hash, include?: false)
+      allow(HTTParty).to receive(:get).and_return(response)
+    end
+
+    it "returns the item's comment when the username has a valid bid" do
+      stub_geeklist_response(
+        "geeklist" => {
+          "item" => [
+            { "objectname" => "Wingspan", "username" => "alice", "comment" => "45" },
+            { "objectname" => "Gloomhaven", "username" => "bob", "comment" => "60" }
+          ]
+        }
+      )
+
+      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([{ "Wingspan" => "45" }])
+    end
+
+    it "returns the item with a nil comment when the username has no bid yet" do
+      stub_geeklist_response(
+        "geeklist" => {
+          "item" => [
+            { "objectname" => "Wingspan", "username" => "alice", "comment" => nil }
+          ]
+        }
+      )
+
+      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([{ "Wingspan" => nil }])
+    end
+
+    it "returns an empty array when the username never appears on the geeklist at all" do
+      stub_geeklist_response(
+        "geeklist" => {
+          "item" => [
+            { "objectname" => "Wingspan", "username" => "bob", "comment" => "45" }
+          ]
+        }
+      )
+
+      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([])
+    end
+
+    it "returns an empty array instead of raising when BGG's response has no geeklist/item data" do
+      # Regression test: BGG's geeklist-comments generation is asynchronous, and an
+      # in-between response whose body doesn't match the pending-message text can slip
+      # past the retry loop, leaving response['geeklist'] nil. This used to raise
+      # `undefined method '[]' for nil:NilClass` instead of returning [].
+      stub_geeklist_response({})
+
+      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([])
+    end
+
+    it "does not raise when a single-item geeklist collapses 'item' from an Array to a Hash" do
+      stub_geeklist_response(
+        "geeklist" => {
+          "item" => { "objectname" => "Wingspan", "username" => "alice", "comment" => "45" }
+        }
+      )
+
+      expect(described_class.fetch_auction_bids(12_345, "alice")).to eq([{ "Wingspan" => "45" }])
+    end
+  end
 end
