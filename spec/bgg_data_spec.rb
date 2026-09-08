@@ -66,7 +66,11 @@ RSpec.describe BggData do
     end
 
     before do
-      response = instance_double(HTTParty::Response, code: 200, body: "", to_h: response_hash)
+      # A plain double, not instance_double: HTTParty::Response exposes `to_h` via
+      # dynamic delegation to the parsed body rather than as a real instance method
+      # (see the same note on stub_geeklist_response below), so it isn't safe to
+      # verify against the class.
+      response = double("response", code: 200, body: "", to_h: response_hash)
       allow(HTTParty).to receive(:get).and_return(response)
     end
 
