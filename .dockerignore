@@ -1,0 +1,17 @@
+# Keep .git - bgg_data.gemspec shells out to `git ls-files` to build its file list.
+
+# Unrelated to the MCP server: the board-game taste-scoring Python tooling and its data
+scoring/
+
+# Local/editor cruft
+.DS_Store
+.claude/
+.ruby-lsp/
+
+# Build/test artifacts not needed to run the server
+coverage/
+doc/
+_yardoc/
+pkg/
+tmp/
+.bundle/

@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: bgg-data-mcp
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: MCP_AUTH_TOKEN
+        sync: false        # set manually in Render dashboard - protects the endpoint

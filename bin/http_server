@@ -1,0 +1,94 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Runs BggData's MCP tools over remote HTTP/SSE (fast-mcp's Rack transport) instead of
+# the STDIO transport bin/mcp_server uses for a local Claude Desktop/Code connection.
+# Meant to be deployed behind a real host (e.g. Render) so Claude can reach it by URL.
+
+require "bundler/setup"
+require "logger"
+require "rack"
+require "puma"
+require "puma/configuration"
+require "puma/launcher"
+require "fast_mcp"
+
+# Load lib and mcp folders, same as bin/mcp_server
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+$LOAD_PATH.unshift File.expand_path("../mcp", __dir__)
+
+require "httparty"
+require "active_support/core_ext/hash"
+require "bgg_data"
+require_relative "../lib/mcp/get_collection_tool"
+require_relative "../lib/mcp/get_games_info_tool"
+require_relative "../lib/mcp/get_auction_bids_tool"
+require_relative "../lib/mcp/get_plays_by_month_tool"
+require_relative "../lib/mcp/get_geeklist_tool"
+require_relative "../lib/mcp/get_search_tool"
+
+TOOLS = [
+  GetCollectionTool,
+  GetGamesInfoTool,
+  GetAuctionBidsTool,
+  GetPlaysByMonthTool,
+  GetGeeklistTool,
+  GetSearchTool
+].freeze
+
+# Everything under /mcp is intercepted by FastMcp's Rack middleware before this ever
+# runs (see FastMcp::Transports::RackTransport#call); this only serves Render's health
+# check and a friendly response for anyone who opens the root URL in a browser.
+base_app = lambda do |env|
+  if env["PATH_INFO"] == "/health"
+    [200, { "Content-Type" => "text/plain" }, ["ok"]]
+  else
+    [200, { "Content-Type" => "text/plain" }, ["bgg_data MCP server. Connect at /mcp/sse"]]
+  end
+end
+
+auth_token = ENV["MCP_AUTH_TOKEN"]
+unless auth_token
+  warn "WARNING: MCP_AUTH_TOKEN is not set - this server will accept requests from " \
+       "anyone who finds the URL, with no authentication at all."
+end
+
+# RackTransport defaults to localhost_only + an allowlist of ['localhost', '127.0.0.1',
+# '[::1]'] (DNS-rebinding protection aimed at servers meant to stay on localhost). This
+# server is meant to be reached remotely, so both need explicitly opening up; the
+# MCP_AUTH_TOKEN above (not origin/IP checks) is the real access control here.
+allowed_origins = ["localhost", "127.0.0.1", "[::1]"]
+allowed_origins << ENV["RENDER_EXTERNAL_HOSTNAME"] if ENV["RENDER_EXTERNAL_HOSTNAME"]
+
+middleware_options = {
+  name: "bgg-data",
+  version: BggData::VERSION,
+  logger: Logger.new($stdout),
+  localhost_only: false,
+  allowed_origins: allowed_origins
+}
+middleware_options[:auth_token] = auth_token if auth_token
+
+mcp_app = FastMcp.public_send(
+  auth_token ? :authenticated_rack_middleware : :rack_middleware,
+  base_app,
+  middleware_options
+) do |server|
+  server.register_tools(*TOOLS)
+end
+
+app = Rack::Builder.new { run mcp_app }
+port = (ENV["PORT"] || 8080).to_i
+
+config = Puma::Configuration.new do |user_config|
+  user_config.bind "tcp://0.0.0.0:#{port}"
+  user_config.app app
+end
+
+puts "Starting bgg_data MCP server on 0.0.0.0:#{port}"
+puts "  MCP SSE endpoint:  /mcp/sse"
+puts "  MCP messages:      /mcp/messages (used internally, not what you connect to)"
+puts "  Health check:      /health"
+puts "  Auth:              #{auth_token ? 'enabled (Authorization: Bearer <token>)' : 'DISABLED'}"
+
+Puma::Launcher.new(config).run

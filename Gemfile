@@ -7,6 +7,8 @@ gemspec
 
 gem 'fast-mcp'
 
+gem 'puma'
+
 gem "rake"
 
 gem "rspec"

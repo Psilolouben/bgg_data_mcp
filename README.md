@@ -99,6 +99,12 @@ Add the following to your Claude Desktop MCP config:
 }
 ```
 
+### Running remotely
+
+`bin/mcp_server` above only works for a local, same-machine Claude connection (STDIO
+transport). To expose these tools at a URL instead - e.g. deployed on Render, the same
+way `gr-scraper-mcp` is - see [DEPLOY.md](DEPLOY.md), which uses `bin/http_server`.
+
 ## Development
 
 ```bash
