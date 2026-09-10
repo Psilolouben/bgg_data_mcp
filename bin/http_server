@@ -47,25 +47,25 @@ base_app = lambda do |env|
   end
 end
 
+# This server is meant for anyone to connect to and use, the same way a public MCP
+# server on Render normally works - so it runs open by default. MCP_AUTH_TOKEN is an
+# optional escape hatch: set it later in Render's dashboard (no code change needed) if
+# abuse ever becomes a problem and you want to restrict it to people you've given the
+# token to.
 auth_token = ENV["MCP_AUTH_TOKEN"]
-unless auth_token
-  warn "WARNING: MCP_AUTH_TOKEN is not set - this server will accept requests from " \
-       "anyone who finds the URL, with no authentication at all."
-end
 
 # RackTransport defaults to localhost_only + an allowlist of ['localhost', '127.0.0.1',
-# '[::1]'] (DNS-rebinding protection aimed at servers meant to stay on localhost). This
-# server is meant to be reached remotely, so both need explicitly opening up; the
-# MCP_AUTH_TOKEN above (not origin/IP checks) is the real access control here.
-allowed_origins = ["localhost", "127.0.0.1", "[::1]"]
-allowed_origins << ENV["RENDER_EXTERNAL_HOSTNAME"] if ENV["RENDER_EXTERNAL_HOSTNAME"]
-
+# '[::1]'] - DNS-rebinding protection aimed at a server meant to stay on localhost and
+# only ever be called from a browser tab on the same machine. Neither applies here:
+# this is a public, non-browser API meant to be called by arbitrary remote clients
+# (Claude's own backend, not someone's browser), so both are opened up entirely rather
+# than guessing at an allowlist of callers that can't be known in advance.
 middleware_options = {
   name: "bgg-data",
   version: BggData::VERSION,
   logger: Logger.new($stdout),
   localhost_only: false,
-  allowed_origins: allowed_origins
+  allowed_origins: []
 }
 middleware_options[:auth_token] = auth_token if auth_token
 
@@ -89,6 +89,6 @@ puts "Starting bgg_data MCP server on 0.0.0.0:#{port}"
 puts "  MCP endpoint:      /mcp/messages (point a Streamable-HTTP client here)"
 puts "  MCP SSE endpoint:  /mcp/sse (only for clients using the older SSE handshake)"
 puts "  Health check:      /health"
-puts "  Auth:              #{auth_token ? 'enabled (Authorization: Bearer <token>)' : 'DISABLED'}"
+puts "  Auth:              #{auth_token ? 'required (Authorization: Bearer <token>)' : 'open - anyone can call these tools'}"
 
 Puma::Launcher.new(config).run

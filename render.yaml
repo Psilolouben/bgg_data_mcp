@@ -4,6 +4,6 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    envVars:
-      - key: MCP_AUTH_TOKEN
-        sync: false        # set manually in Render dashboard - protects the endpoint
+    # No env vars required - this runs open to anyone by default (see DEPLOY.md).
+    # To restrict access later, add MCP_AUTH_TOKEN under this service's Environment
+    # tab in the Render dashboard; no redeploy or render.yaml change needed.

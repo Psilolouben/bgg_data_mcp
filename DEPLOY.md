@@ -2,47 +2,40 @@
 
 `bin/mcp_server` talks MCP over STDIO, which only works for a local Claude Desktop/Code
 connection on the same machine. `bin/http_server` runs the same tools behind fast-mcp's
-HTTP/SSE Rack transport instead, so a hosting platform can expose them at a URL Claude
-can call from anywhere — the same shape as `gamerules/gr-scraper-mcp` on Render.
+HTTP/SSE Rack transport instead, so a hosting platform can expose them at a URL anyone
+can point their own Claude at — the same shape as `gamerules/gr-scraper-mcp` on Render.
 
-## 1. Generate an auth token
+This is meant to be public: it runs with **no authentication by default**, the same way
+`gr-scraper-mcp`'s `/mcp` route does, so anyone can add it as a connector and use the
+BGG tools without asking you for anything first. There's no per-user login or rate
+limiting - everyone shares the one BGG bearer token baked into `lib/bgg_data.rb`, so a
+heavy user could in principle get that token rate-limited by BGG for everyone. If that
+ever becomes a real problem, see "Restricting access" below for how to lock it down
+without a code change.
 
-This server has no per-user login, so a single shared bearer token is what stops anyone
-who finds the URL from calling your BGG tools:
-
-```bash
-ruby -rsecurerandom -e 'puts SecureRandom.hex(32)'
-```
-
-Save that value — you'll set it as `MCP_AUTH_TOKEN` in Render and hand it to Claude when
-you add the connector. If you skip this, the server logs a warning and runs with no
-authentication at all — anyone with the URL can call your tools.
-
-## 2. Deploy to Render
+## 1. Deploy to Render
 
 1. Push `bgg_data/` to a GitHub repo (it can be a subfolder of a larger repo)
 2. In the [Render dashboard](https://render.com) → **New → Web Service**
 3. Connect your GitHub repo → if `bgg_data` isn't the repo root, set **Root directory**
    to `bgg_data`
 4. Render detects `Dockerfile` and `render.yaml` automatically
-5. Under **Environment**, set `MCP_AUTH_TOKEN` to the value from step 1
-6. Deploy — first build takes a few minutes (installs gems fresh for Linux, see note
-   below)
+5. Deploy — first build takes a few minutes (installs gems fresh for Linux, see note
+   below). No environment variables are required for public access.
 
 Render's free plan spins down after inactivity, so the first request after a quiet
 period takes ~30–50s to wake up; upgrade to **Starter** ($7/mo) in `render.yaml` if that
-cold start is annoying for something you'll poke at often.
+cold start is annoying for people trying it out.
 
-## 3. Connect to Claude
+## 2. Point Claude at it
 
-Add it as a custom/remote MCP connector pointing at:
+Give people this URL to add as a custom/remote MCP connector - no auth needed:
 
 ```
 https://your-service.onrender.com/mcp/messages
 ```
 
-with the bearer token from step 1 as its authentication (`Authorization: Bearer
-<token>`). The exact place to enter this depends on which Claude surface you're using
+The exact place to enter this depends on which Claude surface someone's using
 (Desktop/Code settings vs. a `mcpServers` config block) — if it asks for a JSON block
 instead of a UI field, it looks like:
 
@@ -50,8 +43,7 @@ instead of a UI field, it looks like:
 {
   "mcpServers": {
     "bgg-data": {
-      "url": "https://your-service.onrender.com/mcp/messages",
-      "headers": { "Authorization": "Bearer <token>" }
+      "url": "https://your-service.onrender.com/mcp/messages"
     }
   }
 }
@@ -78,6 +70,32 @@ client that still speaks the old transport, and failing that, upgrading fast-mcp
 switching this server to a Ruby SDK with native Streamable HTTP support, if one
 exists) would be the next thing to look into.
 
+## Restricting access (optional)
+
+If usage ever needs limiting, set `MCP_AUTH_TOKEN` in Render's dashboard - no code
+change or redeploy needed, `bin/http_server` picks it up on next boot:
+
+```bash
+ruby -rsecurerandom -e 'puts SecureRandom.hex(32)'
+```
+
+Once set, the server requires `Authorization: Bearer <token>` on every request, and
+whoever you want to keep using it needs that header added to their connector config:
+
+```json
+{
+  "mcpServers": {
+    "bgg-data": {
+      "url": "https://your-service.onrender.com/mcp/messages",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+This is all-or-nothing (one shared token, not per-user accounts) - fine for cutting off
+public access entirely or sharing with a specific group, not for anything finer-grained.
+
 ## Notes
 
 - **Why the Dockerfile re-locks the Gemfile before installing:** `Gemfile.lock` was
@@ -86,7 +104,7 @@ exists) would be the next thing to look into.
   platforms [...]"; the Dockerfile runs `bundle lock --add-platform` first to fix that.
 - Local dev keeps using `bin/mcp_server` (STDIO) — nothing about your existing local
   Claude Desktop/Code setup changes.
-- To run the HTTP server locally: `MCP_AUTH_TOKEN=test bin/http_server`, then check
+- To run the HTTP server locally: `bin/http_server`, then check
   `curl http://localhost:8080/health`.
 - I could not actually run `docker build` / deploy this myself (no Docker or network
   access to Render/RubyGems from where I was working) — the Ruby code, Dockerfile, and
