@@ -7,11 +7,23 @@ can point their own Claude at — the same shape as `gamerules/gr-scraper-mcp` o
 
 This is meant to be public: it runs with **no authentication by default**, the same way
 `gr-scraper-mcp`'s `/mcp` route does, so anyone can add it as a connector and use the
-BGG tools without asking you for anything first. There's no per-user login or rate
-limiting - everyone shares the one BGG bearer token baked into `lib/bgg_data.rb`, so a
-heavy user could in principle get that token rate-limited by BGG for everyone. If that
-ever becomes a real problem, see "Restricting access" below for how to lock it down
-without a code change.
+BGG tools without asking you for anything first. Everyone shares the one BGG bearer
+token baked into `lib/bgg_data.rb` though - there's no per-user BGG identity - so a
+heavy or automated caller could burn through BGG's own rate limit for everyone,
+including you. Per BGG's own docs, sustained abuse is "grounds for having your license
+suspended," not just a temporary slowdown - see the note on `MCP_RATE_LIMIT_PER_MINUTE`
+below for how this server defends against that without requiring a token from normal
+users. If public access ever needs shutting off entirely, see "Restricting access"
+below.
+
+**`bin/http_server` rate-limits the `/mcp` endpoints per caller IP** (30
+requests/minute by default, `/health` is never limited) specifically to blunt a bot or
+runaway script hammering it, while staying invisible to normal, occasional tool calls
+from a real conversation. Tune it with `MCP_RATE_LIMIT_PER_MINUTE` in Render's
+dashboard (set to `0` to disable it). It's intentionally simple - in-process memory, no
+Redis or similar - so it resets on every deploy/restart and only works correctly with
+a single running instance; it's not a defense against a distributed attack, just
+against the much more likely "one client in a bad loop" case.
 
 ## 1. Deploy to Render
 
