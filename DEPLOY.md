@@ -1,9 +1,13 @@
 # bgg_data — Remote Deployment Guide
 
 `bin/mcp_server` talks MCP over STDIO, which only works for a local Claude Desktop/Code
-connection on the same machine. `bin/http_server` runs the same tools behind fast-mcp's
-HTTP/SSE Rack transport instead, so a hosting platform can expose them at a URL anyone
-can point their own Claude at — the same shape as `gamerules/gr-scraper-mcp` on Render.
+connection on the same machine. `bin/http_server` runs the same tools behind a
+single-endpoint "Streamable HTTP" transport instead, so a hosting platform can expose
+them at a URL anyone can point their own Claude at — the same shape as
+`gamerules/gr-scraper-mcp` on Render. It's hand-rolled rather than using fast-mcp's own
+bundled Rack transport: fast-mcp 1.6.0 only implements the older two-endpoint HTTP+SSE
+handshake, which isn't what Claude's remote connectors speak — see the note in
+`bin/http_server`'s header comment for the full story of why.
 
 This is meant to be public: it runs with **no authentication by default**, the same way
 `gr-scraper-mcp`'s `/mcp` route does, so anyone can add it as a connector and use the
@@ -44,7 +48,7 @@ cold start is annoying for people trying it out.
 Give people this URL to add as a custom/remote MCP connector - no auth needed:
 
 ```
-https://your-service.onrender.com/mcp/messages
+https://your-service.onrender.com/mcp
 ```
 
 The exact place to enter this depends on which Claude surface someone's using
@@ -55,32 +59,36 @@ instead of a UI field, it looks like:
 {
   "mcpServers": {
     "bgg-data": {
-      "url": "https://your-service.onrender.com/mcp/messages"
+      "url": "https://your-service.onrender.com/mcp"
     }
   }
 }
 ```
 
-**Why `/mcp/messages` and not `/mcp/sse`:** fast-mcp 1.6.0 (the version this gem is
-pinned to) implements the older two-endpoint HTTP+SSE transport - `GET /mcp/sse` to
-open a stream, `POST /mcp/messages` to send JSON-RPC - rather than the newer
-single-endpoint Streamable HTTP transport that `gr-scraper-mcp` uses (via the official
-JS SDK's `StreamableHTTPServerTransport`, a single `POST /mcp`). `/mcp/sse` is only
-useful to a client that speaks the *old* handshake (GET the stream first, get told
-where to POST); a Streamable-HTTP client has no reason to call it and would just POST
-straight to whatever URL you give it. `/mcp/messages` already does exactly that: it
-takes a POST body, runs it through the same synchronous JSON-RPC dispatch
-(`initialize`, `tools/list`, `tools/call`, ...) and returns a plain `application/json`
-response - functionally the same shape as gr-scraper's `/mcp` route, just at a
-different path. So pointing a Streamable-HTTP client at `/mcp/messages` directly
-should work even though fast-mcp's own docs frame it as part of the "SSE" pair.
+**Why a hand-rolled transport instead of fast-mcp's built-in one:** fast-mcp 1.6.0 (the version this gem is pinned to) only ships the
+older two-endpoint HTTP+SSE transport - `GET` a stream URL first to open a session,
+then `POST` JSON-RPC to a second URL tied to that session. Claude's remote connectors
+(and the modern MCP spec generally) speak the newer *single-endpoint* Streamable HTTP
+transport: POST JSON-RPC straight to one URL, no separate handshake. Pointing a
+Streamable-HTTP client at fast-mcp's old-style endpoint without ever opening the SSE
+session first left every request without one, which fast-mcp rejected in a way Claude's
+client misread as "this server needs OAuth sign-in" - the actual error reported back
+was `Couldn't register with BGG Data Online's sign-in service`, i.e. a failed OAuth
+dynamic-client-registration attempt, not a real auth requirement.
 
-I haven't been able to test this end-to-end myself (no way to run an actual MCP client
-against a live deployment from where I was working), so treat this as the informed
-best guess it is: if `/mcp/messages` doesn't work, the fallback is `/mcp/sse` for a
-client that still speaks the old transport, and failing that, upgrading fast-mcp (or
-switching this server to a Ruby SDK with native Streamable HTTP support, if one
-exists) would be the next thing to look into.
+`bin/http_server` now sidesteps fast-mcp's Rack transport entirely for the HTTP layer:
+it still uses `FastMcp::Tool` for argument schemas/validation and
+`FastMcp::Server#handle_request` for the actual JSON-RPC dispatch (`initialize`,
+`tools/list`, `tools/call`, ...), but a small hand-rolled Rack app owns the single
+`/mcp` endpoint - the same shape as gr-scraper's `/mcp` route via the official JS SDK's
+`StreamableHTTPServerTransport`. See the comment block at the top of `bin/http_server`
+for exactly how the two are wired together.
+
+I still haven't been able to test this end-to-end myself against a live Claude
+connector (no way to run one from where I was working), so this is a considered fix
+for a diagnosed root cause rather than something I've watched work - if `/mcp` still
+doesn't connect cleanly, the Render service logs (the `warn` line `bin/http_server`
+prints on any unhandled error) are the next place to look.
 
 ## Restricting access (optional)
 
@@ -98,7 +106,7 @@ whoever you want to keep using it needs that header added to their connector con
 {
   "mcpServers": {
     "bgg-data": {
-      "url": "https://your-service.onrender.com/mcp/messages",
+      "url": "https://your-service.onrender.com/mcp",
       "headers": { "Authorization": "Bearer <token>" }
     }
   }
@@ -120,5 +128,6 @@ public access entirely or sharing with a specific group, not for anything finer-
   `curl http://localhost:8080/health`.
 - I could not actually run `docker build` / deploy this myself (no Docker or network
   access to Render/RubyGems from where I was working) — the Ruby code, Dockerfile, and
-  fast-mcp API calls are all verified against fast-mcp's real source on GitHub, but a
-  local `docker build .` before pushing to Render is worth doing as a sanity check.
+  the `FastMcp::Server`/`FastMcp::Tool` API calls `bin/http_server` relies on are all
+  verified against fast-mcp 1.6.0's real source on GitHub, but a local `docker build .`
+  before pushing to Render is worth doing as a sanity check.

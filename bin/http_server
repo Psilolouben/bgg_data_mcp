@@ -1,9 +1,28 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Runs BggData's MCP tools over remote HTTP/SSE (fast-mcp's Rack transport) instead of
-# the STDIO transport bin/mcp_server uses for a local Claude Desktop/Code connection.
+# Runs BggData's MCP tools over the MCP "Streamable HTTP" transport instead of the
+# STDIO transport bin/mcp_server uses for a local Claude Desktop/Code connection.
 # Meant to be deployed behind a real host (e.g. Render) so Claude can reach it by URL.
+#
+# Why this doesn't use fast-mcp's own Rack transport (FastMcp.rack_middleware /
+# FastMcp::Transports::RackTransport): as of fast-mcp 1.6.0 that transport implements
+# the *older* two-endpoint HTTP+SSE handshake (GET a /sse route to open a session, POST
+# JSON-RPC to a /messages route tied to that session). Claude's remote connectors (and
+# the modern MCP spec generally) speak the newer *single-endpoint* Streamable HTTP
+# transport: POST JSON-RPC directly to one URL, no separate SSE handshake required.
+# Pointing Claude at fast-mcp's /mcp/messages without ever opening /mcp/sse first left
+# every request without a valid session, which fast-mcp surfaced as a rejection that
+# Claude's client misread as "this server needs OAuth sign-in".
+#
+# The fix: use FastMcp only for what it's good at here (FastMcp::Tool's argument
+# schema/validation, and FastMcp::Server's JSON-RPC method dispatch via
+# #handle_request), and hand-roll the thin single-endpoint HTTP layer ourselves - the
+# same shape as the official Node SDK's StreamableHTTPServerTransport that
+# gr-scraper-mcp uses. FastMcp::Server#handle_request doesn't return the response
+# directly - it hands it to whatever object is set as `server.transport` via that
+# object's #send_message - so CapturingTransport below just stands in as the simplest
+# possible transport: catch the one message handle_request produces and hand it back.
 
 require "bundler/setup"
 require "json"
@@ -37,7 +56,115 @@ TOOLS = [
   GetSearchTool
 ].freeze
 
-# Per-IP, fixed-window rate limiter for the /mcp endpoints only (never /health, so
+# Stands in for a real fast-mcp transport. FastMcp::Server#handle_request doesn't
+# return its JSON-RPC response to the caller - it calls `server.transport.send_message`
+# with it (see FastMcp::Server#send_response). This just catches that one message so
+# our Rack handler can turn it into an HTTP response body.
+#
+# A notification (e.g. "notifications/initialized") has no reply at all, so #message
+# staying nil after #handle_request returns is the expected, valid outcome for those -
+# the caller turns that into "202 Accepted, empty body" rather than treating it as a
+# missing/failed response.
+class CapturingTransport
+  attr_reader :message
+
+  def send_message(message)
+    @message = message
+  end
+end
+
+# One shared FastMcp::Server handles every request. It isn't safe to swap its
+# `transport` from multiple threads at once (Puma runs several), so MCP_MUTEX
+# serializes the "point transport at a fresh CapturingTransport, dispatch, read the
+# captured message back off it" sequence per request. That's a fine tradeoff here:
+# each call is a single quick JSON-RPC exchange (occasionally one BGG HTTP round trip
+# for a tool call), not a long-held resource.
+MCP_SERVER = FastMcp::Server.new(name: "bgg-data", version: BggData::VERSION, logger: Logger.new($stdout))
+MCP_SERVER.register_tools(*TOOLS)
+MCP_MUTEX = Mutex.new
+
+CORS_HEADERS = {
+  "Access-Control-Allow-Origin" => "*",
+  "Access-Control-Allow-Methods" => "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers" => "Content-Type, Authorization, Mcp-Session-Id, Mcp-Protocol-Version",
+  "Access-Control-Expose-Headers" => "Mcp-Session-Id"
+}.freeze
+
+# This server is meant for anyone to connect to and use, the same way a public MCP
+# server normally works - so it runs open by default. MCP_AUTH_TOKEN is an optional
+# escape hatch: set it later in Render's dashboard (no code change needed) if abuse
+# ever becomes a problem and you want to restrict it to people you've given the token
+# to. Unlike the fast-mcp Rack transport this replaces, that check now lives here,
+# hand-rolled, since we no longer go through FastMcp.authenticated_rack_middleware.
+AUTH_TOKEN = ENV["MCP_AUTH_TOKEN"]
+
+def unauthorized_response
+  body = JSON.generate(jsonrpc: "2.0", error: { code: -32_001, message: "Unauthorized" }, id: nil)
+  [401, { "Content-Type" => "application/json", "WWW-Authenticate" => "Bearer" }.merge(CORS_HEADERS), [body]]
+end
+
+def handle_mcp_post(env)
+  request = Rack::Request.new(env)
+
+  if AUTH_TOKEN
+    provided = request.get_header("HTTP_AUTHORIZATION").to_s.sub(/\ABearer\s+/i, "")
+    return unauthorized_response unless Rack::Utils.secure_compare(provided, AUTH_TOKEN)
+  end
+
+  body = request.body.read
+  headers = { "Authorization" => request.get_header("HTTP_AUTHORIZATION") }.compact
+
+  message = begin
+    MCP_MUTEX.synchronize do
+      capture = CapturingTransport.new
+      MCP_SERVER.transport = capture
+      MCP_SERVER.handle_request(body, headers: headers)
+      capture.message
+    end
+  rescue StandardError => e
+    # Belt-and-braces: FastMcp::Server#handle_request already rescues errors from
+    # individual tool calls and turns them into a JSON-RPC error response, so this is
+    # only reached if something more fundamental broke (e.g. an incompatible fast-mcp
+    # version changing this internal API). Better a clear JSON-RPC error the client can
+    # show than a bare Puma 500.
+    warn "[bgg-data mcp] unhandled error in handle_mcp_post: #{e.class}: #{e.message}"
+    { jsonrpc: "2.0", error: { code: -32_603, message: "Internal error: #{e.message}" }, id: nil }
+  end
+
+  if message.nil?
+    # A notification (no "id", e.g. notifications/initialized) - per the MCP spec the
+    # server sends no reply, just acknowledges receipt.
+    [202, CORS_HEADERS.dup, []]
+  else
+    [200, { "Content-Type" => "application/json" }.merge(CORS_HEADERS), [JSON.generate(message)]]
+  end
+end
+
+mcp_app = lambda do |env|
+  case env["PATH_INFO"]
+  when "/mcp"
+    case env["REQUEST_METHOD"]
+    when "POST"
+      handle_mcp_post(env)
+    when "OPTIONS"
+      [204, CORS_HEADERS.dup, []]
+    when "GET"
+      # We never push server-initiated messages, so there's no SSE stream to open here.
+      [405, { "Content-Type" => "text/plain" }.merge(CORS_HEADERS), ["Method Not Allowed - this server has nothing to stream"]]
+    when "DELETE"
+      # We're stateless (no session to tear down), so acknowledge and move on.
+      [200, CORS_HEADERS.dup, []]
+    else
+      [405, { "Content-Type" => "text/plain" }.merge(CORS_HEADERS), ["Method Not Allowed"]]
+    end
+  when "/health"
+    [200, { "Content-Type" => "text/plain" }, ["ok"]]
+  else
+    [200, { "Content-Type" => "text/plain" }, ["bgg_data MCP server. Connect at /mcp"]]
+  end
+end
+
+# Per-IP, fixed-window rate limiter for the /mcp endpoint only (never /health, so
 # Render's own health checks are never at risk of tripping it). The goal isn't to stop
 # a determined attacker - it's to keep one runaway script or bot loop from burning
 # through BGG's shared rate limit (see DEPLOY.md) while normal, occasional tool use
@@ -59,7 +186,7 @@ class RateLimiter
 
   def call(env)
     request = Rack::Request.new(env)
-    return @app.call(env) unless request.path.start_with?("/mcp")
+    return @app.call(env) unless request.path == "/mcp"
     return @app.call(env) if @max_requests_per_window <= 0 # 0 disables the limiter entirely
 
     allowed = check_and_record(request.ip)
@@ -100,49 +227,8 @@ class RateLimiter
       error: { code: -32_000, message: "Rate limit exceeded - slow down and try again in a minute." },
       id: nil
     )
-    [429, { "Content-Type" => "application/json", "Retry-After" => WINDOW_SECONDS.to_s }, [body]]
+    [429, { "Content-Type" => "application/json", "Retry-After" => WINDOW_SECONDS.to_s }.merge(CORS_HEADERS), [body]]
   end
-end
-
-# Everything under /mcp is intercepted by FastMcp's Rack middleware before this ever
-# runs (see FastMcp::Transports::RackTransport#call); this only serves Render's health
-# check and a friendly response for anyone who opens the root URL in a browser.
-base_app = lambda do |env|
-  if env["PATH_INFO"] == "/health"
-    [200, { "Content-Type" => "text/plain" }, ["ok"]]
-  else
-    [200, { "Content-Type" => "text/plain" }, ["bgg_data MCP server. Connect at /mcp/messages"]]
-  end
-end
-
-# This server is meant for anyone to connect to and use, the same way a public MCP
-# server on Render normally works - so it runs open by default. MCP_AUTH_TOKEN is an
-# optional escape hatch: set it later in Render's dashboard (no code change needed) if
-# abuse ever becomes a problem and you want to restrict it to people you've given the
-# token to.
-auth_token = ENV["MCP_AUTH_TOKEN"]
-
-# RackTransport defaults to localhost_only + an allowlist of ['localhost', '127.0.0.1',
-# '[::1]'] - DNS-rebinding protection aimed at a server meant to stay on localhost and
-# only ever be called from a browser tab on the same machine. Neither applies here:
-# this is a public, non-browser API meant to be called by arbitrary remote clients
-# (Claude's own backend, not someone's browser), so both are opened up entirely rather
-# than guessing at an allowlist of callers that can't be known in advance.
-middleware_options = {
-  name: "bgg-data",
-  version: BggData::VERSION,
-  logger: Logger.new($stdout),
-  localhost_only: false,
-  allowed_origins: []
-}
-middleware_options[:auth_token] = auth_token if auth_token
-
-mcp_app = FastMcp.public_send(
-  auth_token ? :authenticated_rack_middleware : :rack_middleware,
-  base_app,
-  middleware_options
-) do |server|
-  server.register_tools(*TOOLS)
 end
 
 rate_limit_per_minute = (ENV["MCP_RATE_LIMIT_PER_MINUTE"] || 30).to_i
@@ -157,10 +243,9 @@ config = Puma::Configuration.new do |user_config|
 end
 
 puts "Starting bgg_data MCP server on 0.0.0.0:#{port}"
-puts "  MCP endpoint:      /mcp/messages (point a Streamable-HTTP client here)"
-puts "  MCP SSE endpoint:  /mcp/sse (only for clients using the older SSE handshake)"
+puts "  MCP endpoint:      /mcp (Streamable HTTP - single endpoint, POST JSON-RPC here)"
 puts "  Health check:      /health"
-puts "  Auth:              #{auth_token ? 'required (Authorization: Bearer <token>)' : 'open - anyone can call these tools'}"
+puts "  Auth:              #{AUTH_TOKEN ? 'required (Authorization: Bearer <token>)' : 'open - anyone can call these tools'}"
 puts "  Rate limit:        #{rate_limit_per_minute.positive? ? "#{rate_limit_per_minute} requests/min per IP" : 'DISABLED'}"
 
 Puma::Launcher.new(config).run
