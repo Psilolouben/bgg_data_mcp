@@ -43,7 +43,7 @@ base_app = lambda do |env|
   if env["PATH_INFO"] == "/health"
     [200, { "Content-Type" => "text/plain" }, ["ok"]]
   else
-    [200, { "Content-Type" => "text/plain" }, ["bgg_data MCP server. Connect at /mcp/sse"]]
+    [200, { "Content-Type" => "text/plain" }, ["bgg_data MCP server. Connect at /mcp/messages"]]
   end
 end
 
@@ -86,8 +86,8 @@ config = Puma::Configuration.new do |user_config|
 end
 
 puts "Starting bgg_data MCP server on 0.0.0.0:#{port}"
-puts "  MCP SSE endpoint:  /mcp/sse"
-puts "  MCP messages:      /mcp/messages (used internally, not what you connect to)"
+puts "  MCP endpoint:      /mcp/messages (point a Streamable-HTTP client here)"
+puts "  MCP SSE endpoint:  /mcp/sse (only for clients using the older SSE handshake)"
 puts "  Health check:      /health"
 puts "  Auth:              #{auth_token ? 'enabled (Authorization: Bearer <token>)' : 'DISABLED'}"
 

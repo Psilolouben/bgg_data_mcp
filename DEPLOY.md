@@ -38,7 +38,7 @@ cold start is annoying for something you'll poke at often.
 Add it as a custom/remote MCP connector pointing at:
 
 ```
-https://your-service.onrender.com/mcp/sse
+https://your-service.onrender.com/mcp/messages
 ```
 
 with the bearer token from step 1 as its authentication (`Authorization: Bearer
@@ -50,19 +50,33 @@ instead of a UI field, it looks like:
 {
   "mcpServers": {
     "bgg-data": {
-      "url": "https://your-service.onrender.com/mcp/sse",
+      "url": "https://your-service.onrender.com/mcp/messages",
       "headers": { "Authorization": "Bearer <token>" }
     }
   }
 }
 ```
 
-**Compatibility caveat:** fast-mcp 1.6.0 (the version this gem is pinned to) only
-implements the older two-endpoint HTTP+SSE transport (`/mcp/sse` + `/mcp/messages`),
-not the newer single-endpoint Streamable HTTP transport some MCP clients now prefer.
-Most clients still support SSE for backward compatibility, but if Claude's connector
-setup rejects this URL or can't complete the handshake, that mismatch is the likely
-cause — worth checking fast-mcp's changelog for a newer release before digging further.
+**Why `/mcp/messages` and not `/mcp/sse`:** fast-mcp 1.6.0 (the version this gem is
+pinned to) implements the older two-endpoint HTTP+SSE transport - `GET /mcp/sse` to
+open a stream, `POST /mcp/messages` to send JSON-RPC - rather than the newer
+single-endpoint Streamable HTTP transport that `gr-scraper-mcp` uses (via the official
+JS SDK's `StreamableHTTPServerTransport`, a single `POST /mcp`). `/mcp/sse` is only
+useful to a client that speaks the *old* handshake (GET the stream first, get told
+where to POST); a Streamable-HTTP client has no reason to call it and would just POST
+straight to whatever URL you give it. `/mcp/messages` already does exactly that: it
+takes a POST body, runs it through the same synchronous JSON-RPC dispatch
+(`initialize`, `tools/list`, `tools/call`, ...) and returns a plain `application/json`
+response - functionally the same shape as gr-scraper's `/mcp` route, just at a
+different path. So pointing a Streamable-HTTP client at `/mcp/messages` directly
+should work even though fast-mcp's own docs frame it as part of the "SSE" pair.
+
+I haven't been able to test this end-to-end myself (no way to run an actual MCP client
+against a live deployment from where I was working), so treat this as the informed
+best guess it is: if `/mcp/messages` doesn't work, the fallback is `/mcp/sse` for a
+client that still speaks the old transport, and failing that, upgrading fast-mcp (or
+switching this server to a Ruby SDK with native Streamable HTTP support, if one
+exists) would be the next thing to look into.
 
 ## Notes
 
