@@ -4,8 +4,10 @@ class GetGeeklistTool < FastMcp::Tool
 
     For each item, returns the game's BGG ID and name, the username offering it,
     a best-effort condition extracted from the listing text (recognizes phrases like
-    "like new", "very good", "good", "played", and the Greek "κατάσταση"), and the
-    listing's comment text trimmed to 200 characters.
+    "like new", "very good", "good", "played", and the Greek "κατάσταση"), the
+    listing's comment text trimmed to 200 characters, and how many thumbs-up that
+    specific listing has received from other BGG users (0 if none) - useful for
+    sorting a list's items by popularity/engagement rather than just BGG ID order.
   DESC
   # These arguments will generate the needed JSON to be presented to the MCP Client
   # And they will be validated at run time.

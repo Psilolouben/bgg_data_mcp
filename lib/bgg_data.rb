@@ -100,7 +100,13 @@ module BggData
         name: item["objectname"],
         username: item["username"],
         condition: extract_condition(body),
-        comment: body.to_s.strip[0, 200]
+        comment: body.to_s.strip[0, 200],
+        # BGG's real xmlapi2/geeklist response carries a "thumbs" attribute on every
+        # <item> - the count of thumbs-up that specific listing has received from other
+        # users. It has nothing to do with a game's own BGG rating; it's how many people
+        # gave *this geeklist entry* a thumbs-up. Missing/blank comes back as 0 rather
+        # than nil, since a listing with no thumbs yet is the common case, not an error.
+        thumbs: item["thumbs"].to_i
       }
     end
   end

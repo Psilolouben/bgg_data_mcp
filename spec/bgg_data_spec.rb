@@ -52,13 +52,17 @@ RSpec.describe BggData do
               "objectid" => "266192",
               "objectname" => "Wingspan",
               "username" => "alice",
-              "body" => "Very good condition, box has minor shelf wear."
+              "body" => "Very good condition, box has minor shelf wear.",
+              "thumbs" => "12"
             },
             {
               "objectid" => "174430",
               "objectname" => "Gloomhaven",
               "username" => "bob",
               "body" => ("x" * 250)
+              # No "thumbs" key at all here, deliberately - covers a listing BGG hasn't
+              # attached the attribute to (or an item shape we haven't seen yet), which
+              # should come back as 0 rather than raising or returning nil.
             }
           ]
         }
@@ -84,14 +88,16 @@ RSpec.describe BggData do
             name: "Wingspan",
             username: "alice",
             condition: "Very good condition, box has minor shelf wear",
-            comment: "Very good condition, box has minor shelf wear."
+            comment: "Very good condition, box has minor shelf wear.",
+            thumbs: 12
           },
           {
             bgg_id: "174430",
             name: "Gloomhaven",
             username: "bob",
             condition: nil,
-            comment: "x" * 200
+            comment: "x" * 200,
+            thumbs: 0
           }
         ]
       )
