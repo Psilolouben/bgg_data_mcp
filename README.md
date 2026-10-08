@@ -11,6 +11,16 @@ A Ruby gem for interacting with the [BoardGameGeek XML API v2](https://boardgame
 - Parse items (game, offering user, condition, comment) from BGG geeklists
 - MCP server with ready-to-use tools for AI integration
 
+## BGG token
+
+BGG's XML API requires an application token. Register an application (non-commercial use is free) at <https://boardgamegeek.com/applications>, wait for approval, create a token, and export it before running anything:
+
+```bash
+export BGG_TOKEN=your-token-here
+```
+
+This project is for personal, non-commercial lookups. Please follow BGG's [XML API terms](https://boardgamegeek.com/wiki/page/XML_API_Terms_of_Use): no bulk collection and no AI training use of the data.
+
 ## Installation
 
 Add to your Gemfile:
@@ -93,7 +103,8 @@ Add the following to your Claude Desktop MCP config:
 {
   "mcpServers": {
     "bgg_data": {
-      "command": "/path/to/bgg_data/bin/mcp_server"
+      "command": "/path/to/bgg_data/bin/mcp_server",
+      "env": { "BGG_TOKEN": "your-token-here" }
     }
   }
 }

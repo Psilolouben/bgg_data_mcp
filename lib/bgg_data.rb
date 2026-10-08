@@ -9,7 +9,10 @@ module BggData
 
   COLLECTION_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/collection"
   BOARDGAME_BASE_URL = "https://www.boardgamegeek.com/xmlapi2/thing"
-  BEARER_TOKEN = 'Bearer c2d66922-196d-43e5-a1cb-56043f13eebd'
+  # BGG XML API application token. Register your own application at
+  # https://boardgamegeek.com/applications and set it as BGG_TOKEN. The server refuses
+  # to start without it (never commit a token to the repo).
+  BEARER_TOKEN = "Bearer #{ENV.fetch('BGG_TOKEN') { raise 'BGG_TOKEN environment variable is not set' }}".freeze
 
   class Error < StandardError; end
 
