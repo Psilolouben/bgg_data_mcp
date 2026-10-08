@@ -4,6 +4,9 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    # No env vars required - this runs open to anyone by default (see DEPLOY.md).
-    # To restrict access later, add MCP_AUTH_TOKEN under this service's Environment
-    # tab in the Render dashboard; no redeploy or render.yaml change needed.
+    envVars:
+      # Your BGG XML API token. Set the value in Render's dashboard (never in this file).
+      - key: BGG_TOKEN
+        sync: false
+    # The server runs open to anyone by default (see DEPLOY.md). To restrict access
+    # later, add MCP_AUTH_TOKEN under this service's Environment tab; no redeploy needed.

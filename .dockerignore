@@ -15,3 +15,7 @@ _yardoc/
 pkg/
 tmp/
 .bundle/
+
+# local secrets
+.env
+.env.*
